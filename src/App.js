@@ -215,33 +215,48 @@ const AdminView = ({ year, month, setMessageBox }) => {
             return;
         }
 
-        const excelData = [];
+        const headers = [
+            '번호', '이름', '주민번호', '지급액(세전)', '', '거래은행', '계좌번호', '연락처', '과목(상세)', '내용', '비고'
+        ];
+        const excelData = [headers];
         let rowNum = 1;
+
         allData.forEach(teamData => {
             teamData.employees.forEach(emp => {
                 const grossPay = Number(emp.grossPay) || 0;
-                excelData.push({
-                    '번호': rowNum++,
-                    '이름': emp.name,
-                    '주민번호': emp.rrn,
-                    '지급액(세전)': grossPay,
-                    '거래은행': emp.bank,
-                    '계좌번호': emp.accountNumber,
-                    '연락처': emp.contact,
-                    '과목(상세)': '수학',
-                    '내용': `수학${teamData.teamId}팀`,
-                    '비고': emp.remarks,
-                });
+                const row = [
+                    rowNum++,
+                    emp.name,
+                    emp.rrn,
+                    grossPay,
+                    '', // E열을 위한 빈 값
+                    emp.bank,
+                    emp.accountNumber,
+                    emp.contact,
+                    '수학',
+                    `수학${teamData.teamId}팀`,
+                    emp.remarks
+                ];
+                excelData.push(row);
             });
         });
 
-        const worksheet = window.XLSX.utils.json_to_sheet(excelData);
+        const worksheet = window.XLSX.utils.aoa_to_sheet(excelData);
         const workbook = window.XLSX.utils.book_new();
         window.XLSX.utils.book_append_sheet(workbook, worksheet, "급여명세서");
 
         worksheet["!cols"] = [
-            { wch: 5 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, 
-            { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 30 }
+            { wch: 5 },   // A: 번호
+            { wch: 15 },  // B: 이름
+            { wch: 15 },  // C: 주민번호
+            { wch: 12 },  // D: 지급액(세전)
+            { wch: 5 },   // E: (빈 칸)
+            { wch: 12 },  // F: 거래은행
+            { wch: 20 },  // G: 계좌번호
+            { wch: 15 },  // H: 연락처
+            { wch: 10 },  // I: 과목(상세)
+            { wch: 12 },  // J: 내용
+            { wch: 30 }   // K: 비고
         ];
 
         window.XLSX.writeFile(workbook, `${year}년_${month}월_급여내역.xlsx`);
