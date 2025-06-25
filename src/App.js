@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
     getAuth, 
@@ -62,11 +62,12 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
     const { teamId } = userProfile;
     const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const docId = `${appId}-${teamId}-${year}-${month}`;
-    const docRef = doc(db, "payrollData", docId);
 
     useEffect(() => {
         setIsLoading(true);
+        const docId = `${appId}-${teamId}-${year}-${month}`;
+        const docRef = doc(db, "payrollData", docId);
+        
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -81,7 +82,7 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [teamId, year, month]);
+    }, [teamId, year, month, setMessageBox]); // 수정된 부분
 
     const addEmployee = () => {
         setEmployees([...employees, { 
@@ -99,6 +100,8 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
     };
 
     const saveData = async () => {
+        const docId = `${appId}-${teamId}-${year}-${month}`;
+        const docRef = doc(db, "payrollData", docId);
         try {
             await setDoc(docRef, { teamId, year, month, employees, updatedAt: new Date() });
             setMessageBox({ message: `[${teamId}팀] ${year}년 ${month}월 데이터가 성공적으로 저장되었습니다.`, type: 'success' });
@@ -179,7 +182,7 @@ const AdminView = ({ year, month, setMessageBox }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [year, month]);
+    }, [year, month, setMessageBox, teamOrder]); // 수정된 부분
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg mt-4">
@@ -245,9 +248,7 @@ const AuthPage = ({ setMessageBox }) => {
             await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
             let errorMessage = "로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해주세요.";
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                 // 그냥 기본 메시지 사용
-            } else if (error.code === 'auth/invalid-credential') {
+            if (error.code === 'auth/invalid-credential') {
                  errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
             }
             console.error("로그인 오류:", error.code);
@@ -356,3 +357,4 @@ export default function App() {
         </div>
     );
 }
+
