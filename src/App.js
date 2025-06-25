@@ -16,9 +16,9 @@ import {
     query, 
     where 
 } from 'firebase/firestore';
+// import * as XLSX from 'xlsx'; // 이 줄을 삭제하고 CDN으로 변경합니다.
 
 // --- Firebase 설정 ---
-// 중요: 이 부분은 실제 Firebase 프로젝트의 설정 값으로 교체해야 합니다.
 const firebaseConfig = {
     apiKey: "AIzaSyCaJInzTmXRzVNcn4a5Tq39k4ljGTDRz7I",
     authDomain: "math-ff860.firebaseapp.com",
@@ -84,6 +84,36 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
         return () => unsubscribe();
     }, [teamId, year, month, setMessageBox]);
 
+    const loadPreviousMonthData = async () => {
+        let prevYear = year;
+        let prevMonth = month - 1;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear = year - 1;
+        }
+
+        const prevDocId = `${appId}-${teamId}-${prevYear}-${prevMonth}`;
+        const prevDocRef = doc(db, "payrollData", prevDocId);
+
+        try {
+            const docSnap = await getDoc(prevDocRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const newEmployees = data.employees.map(emp => ({
+                    ...emp,
+                    id: crypto.randomUUID() 
+                }));
+                setEmployees(newEmployees);
+                setMessageBox({ message: `${prevYear}년 ${prevMonth}월 데이터를 성공적으로 불러왔습니다. 저장 버튼을 눌러야 현재 월에 반영됩니다.`, type: 'success' });
+            } else {
+                setMessageBox({ message: `${prevYear}년 ${prevMonth}월 데이터가 없습니다.`, type: 'info' });
+            }
+        } catch (error) {
+            console.error("이전 달 데이터 로딩 중 오류:", error);
+            setMessageBox({ message: "이전 달 데이터를 불러오는 데 실패했습니다.", type: 'error' });
+        }
+    };
+
     const addEmployee = () => {
         setEmployees([...employees, { 
             id: crypto.randomUUID(), name: '', rrn: '', grossPay: '', 
@@ -113,23 +143,18 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg mt-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">{`팀 [${teamId}] - ${year}년 ${month}월 급여 입력`}</h2>
+             <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">{`팀 [${teamId}] - ${year}년 ${month}월 급여 입력`}</h2>
+                <button onClick={loadPreviousMonthData} className="px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600">
+                    이전 달 정보 불러오기
+                </button>
+            </div>
             {isLoading ? <Spinner /> : (
                  <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
-                                <th className="px-2 py-3">번호</th>
-                                <th className="px-4 py-3">이름</th>
-                                <th className="px-4 py-3">주민번호</th>
-                                <th className="px-4 py-3">지급액(세전)</th>
-                                <th className="px-4 py-3">거래은행</th>
-                                <th className="px-4 py-3">계좌번호</th>
-                                <th className="px-4 py-3">연락처</th>
-                                <th className="px-4 py-3">과목(상세)</th>
-                                <th className="px-4 py-3">내용</th>
-                                <th className="px-4 py-3">비고</th>
-                                <th className="px-2 py-3">삭제</th>
+                                <th className="px-2 py-3">번호</th><th className="px-4 py-3">이름</th><th className="px-4 py-3">주민번호</th><th className="px-4 py-3">지급액(세전)</th><th className="px-4 py-3">거래은행</th><th className="px-4 py-3">계좌번호</th><th className="px-4 py-3">연락처</th><th className="px-4 py-3">과목(상세)</th><th className="px-4 py-3">내용</th><th className="px-4 py-3">비고</th><th className="px-2 py-3">삭제</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -162,10 +187,8 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
     );
 };
 
-// AdminView 컴포넌트 밖에서 teamOrder를 선언하여 불필요한 재선언을 방지합니다.
-const teamOrder = ['0', '1', '2', '3', '4', '5', 'B', 'C', '기타'];
+const teamOrder = ['W', 'K', 'F', 'S', 'O', 'B', 'C', '고1', '기타'];
 
-// 관리자 뷰
 const AdminView = ({ year, month, setMessageBox }) => {
     const [allData, setAllData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -184,11 +207,60 @@ const AdminView = ({ year, month, setMessageBox }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [year, month, setMessageBox]); // 수정된 부분
+    }, [year, month, setMessageBox]);
     
+    const exportToExcel = () => {
+        if (typeof window.XLSX === 'undefined') {
+            setMessageBox({ message: "엑셀 라이브러리를 로드하는 중입니다. 잠시 후 다시 시도해주세요.", type: 'info' });
+            return;
+        }
+
+        if (allData.length === 0) {
+            setMessageBox({ message: "내보낼 데이터가 없습니다.", type: 'info' });
+            return;
+        }
+
+        const excelData = [];
+        let rowNum = 1;
+
+        allData.forEach(teamData => {
+            teamData.employees.forEach(emp => {
+                excelData.push({
+                    '번호': rowNum++,
+                    '이름': emp.name,
+                    '주민번호': emp.rrn,
+                    '지급액(세전)': Number(emp.grossPay),
+                    '거래은행': emp.bank,
+                    '계좌번호': emp.accountNumber,
+                    '연락처': emp.contact,
+                    '과목(상세)': '수학',
+                    '내용': `수학${teamData.teamId}팀`,
+                    '비고': emp.remarks,
+                });
+            });
+        });
+
+        const worksheet = window.XLSX.utils.json_to_sheet(excelData);
+        const workbook = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, "급여명세서");
+
+        const cols = Object.keys(excelData[0] || {}).map(key => ({
+            wch: Math.max(15, key.length, ...excelData.map(row => (row[key] || '').toString().length))
+        }));
+        worksheet["!cols"] = cols;
+
+        window.XLSX.writeFile(workbook, `${year}년_${month}월_급여내역.xlsx`);
+        setMessageBox({ message: "엑셀 파일이 성공적으로 다운로드되었습니다.", type: 'success' });
+    };
+
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg mt-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">{`관리자 대시보드 - ${year}년 ${month}월`}</h2>
+             <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">{`관리자 대시보드 - ${year}년 ${month}월`}</h2>
+                <button onClick={exportToExcel} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700">
+                    엑셀로 내보내기
+                </button>
+            </div>
             {isLoading ? <Spinner /> : allData.length === 0 ? (
                 <p className="text-center text-gray-500 py-4">해당 월에 제출된 데이터가 없습니다.</p>
             ) : (
@@ -200,16 +272,7 @@ const AdminView = ({ year, month, setMessageBox }) => {
                                 <table className="w-full text-sm text-left text-gray-500">
                                     <thead className="text-xs text-gray-700 uppercase bg-gray-200">
                                         <tr>
-                                            <th className="px-2 py-3">번호</th>
-                                            <th className="px-4 py-3">이름</th>
-                                            <th className="px-4 py-3">주민번호</th>
-                                            <th className="px-4 py-3">지급액(세전)</th>
-                                            <th className="px-4 py-3">거래은행</th>
-                                            <th className="px-4 py-3">계좌번호</th>
-                                            <th className="px-4 py-3">연락처</th>
-                                            <th className="px-4 py-3">과목(상세)</th>
-                                            <th className="px-4 py-3">내용</th>
-                                            <th className="px-4 py-3">비고</th>
+                                            <th className="px-2 py-3">번호</th><th className="px-4 py-3">이름</th><th className="px-4 py-3">주민번호</th><th className="px-4 py-3">지급액(세전)</th><th className="px-4 py-3">거래은행</th><th className="px-4 py-3">계좌번호</th><th className="px-4 py-3">연락처</th><th className="px-4 py-3">과목(상세)</th><th className="px-4 py-3">내용</th><th className="px-4 py-3">비고</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -294,6 +357,18 @@ export default function App() {
 
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    // 엑셀 라이브러리를 동적으로 로드합니다.
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+        script.async = true;
+        document.head.appendChild(script);
+
+        return () => {
+            document.head.removeChild(script);
+        };
+    }, []);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
