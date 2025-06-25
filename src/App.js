@@ -18,7 +18,14 @@ import {
 } from 'firebase/firestore';
 
 // --- Firebase 설정 ---
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const firebaseConfig = {
+    apiKey: "AIzaSyCaJInzTmXRzVNcn4a5Tq39k4ljGTDRz7I",
+    authDomain: "math-ff860.firebaseapp.com",
+    projectId: "math-ff860",
+    storageBucket: "math-ff860.firebasestorage.app",
+    messagingSenderId: "993047593248",
+    appId: "1:993047593248:web:3290e48ea3680247d89745"
+  };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
