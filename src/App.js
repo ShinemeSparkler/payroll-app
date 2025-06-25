@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
     getAuth, 
@@ -82,7 +82,7 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [teamId, year, month, setMessageBox]); // 수정된 부분
+    }, [teamId, year, month, setMessageBox]);
 
     const addEmployee = () => {
         setEmployees([...employees, { 
@@ -162,11 +162,13 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
     );
 };
 
+// AdminView 컴포넌트 밖에서 teamOrder를 선언하여 불필요한 재선언을 방지합니다.
+const teamOrder = ['0', '1', '2', '3', '4', '5', 'B', 'C', '기타'];
+
 // 관리자 뷰
 const AdminView = ({ year, month, setMessageBox }) => {
     const [allData, setAllData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const teamOrder = ['0', '1', '2', '3', '4', '5', 'B', 'C', '기타'];
 
     useEffect(() => {
         setIsLoading(true);
@@ -182,7 +184,7 @@ const AdminView = ({ year, month, setMessageBox }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [year, month, setMessageBox, teamOrder]); // 수정된 부분
+    }, [year, month, setMessageBox]); // 수정된 부분
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg mt-4">
@@ -357,4 +359,3 @@ export default function App() {
         </div>
     );
 }
-
