@@ -16,7 +16,6 @@ import {
     query, 
     where 
 } from 'firebase/firestore';
-// import * as XLSX from 'xlsx'; // 이 줄을 삭제하고 CDN으로 변경합니다.
 
 // --- Firebase 설정 ---
 const firebaseConfig = {
@@ -77,7 +76,6 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
             }
             setIsLoading(false);
         }, (error) => {
-            console.error("팀 데이터 로딩 중 오류:", error);
             setMessageBox({ message: `[${teamId}팀] 데이터를 불러오는 데 실패했습니다. Firestore 보안 규칙을 확인하세요.`, type: 'error' });
             setIsLoading(false);
         });
@@ -87,36 +85,26 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
     const loadPreviousMonthData = async () => {
         let prevYear = year;
         let prevMonth = month - 1;
-        if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear = year - 1;
-        }
-
+        if (prevMonth === 0) { prevMonth = 12; prevYear = year - 1; }
         const prevDocId = `${appId}-${teamId}-${prevYear}-${prevMonth}`;
         const prevDocRef = doc(db, "payrollData", prevDocId);
-
         try {
             const docSnap = await getDoc(prevDocRef);
             if (docSnap.exists()) {
-                const data = docSnap.data();
-                const newEmployees = data.employees.map(emp => ({
-                    ...emp,
-                    id: crypto.randomUUID() 
-                }));
+                const newEmployees = docSnap.data().employees.map(emp => ({ ...emp, id: crypto.randomUUID() }));
                 setEmployees(newEmployees);
-                setMessageBox({ message: `${prevYear}년 ${prevMonth}월 데이터를 성공적으로 불러왔습니다. 저장 버튼을 눌러야 현재 월에 반영됩니다.`, type: 'success' });
+                setMessageBox({ message: `${prevYear}년 ${prevMonth}월 데이터를 불러왔습니다. 저장 버튼을 눌러 현재 월에 반영하세요.`, type: 'success' });
             } else {
                 setMessageBox({ message: `${prevYear}년 ${prevMonth}월 데이터가 없습니다.`, type: 'info' });
             }
         } catch (error) {
-            console.error("이전 달 데이터 로딩 중 오류:", error);
             setMessageBox({ message: "이전 달 데이터를 불러오는 데 실패했습니다.", type: 'error' });
         }
     };
 
     const addEmployee = () => {
         setEmployees([...employees, { 
-            id: crypto.randomUUID(), name: '', rrn: '', grossPay: '', 
+            id: crypto.randomUUID(), name: '', rrn: '', grossPay: '',
             bank: '', accountNumber: '', contact: '', remarks: '' 
         }]);
     };
@@ -136,7 +124,6 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
             await setDoc(docRef, { teamId, year, month, employees, updatedAt: new Date() });
             setMessageBox({ message: `[${teamId}팀] ${year}년 ${month}월 데이터가 성공적으로 저장되었습니다.`, type: 'success' });
         } catch (error) {
-            console.error("저장 중 오류:", error);
             setMessageBox({ message: "데이터 저장에 실패했습니다. 권한을 확인해주세요.", type: 'error' });
         }
     };
@@ -154,7 +141,15 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
                     <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
-                                <th className="px-2 py-3">번호</th><th className="px-4 py-3">이름</th><th className="px-4 py-3">주민번호</th><th className="px-4 py-3">지급액(세전)</th><th className="px-4 py-3">거래은행</th><th className="px-4 py-3">계좌번호</th><th className="px-4 py-3">연락처</th><th className="px-4 py-3">과목(상세)</th><th className="px-4 py-3">내용</th><th className="px-4 py-3">비고</th><th className="px-2 py-3">삭제</th>
+                                <th className="px-2 py-3">번호</th>
+                                <th className="px-4 py-3">이름</th>
+                                <th className="px-4 py-3">주민번호</th>
+                                <th className="px-4 py-3">금액</th>
+                                <th className="px-4 py-3">거래은행</th>
+                                <th className="px-4 py-3">계좌번호</th>
+                                <th className="px-4 py-3">연락처</th>
+                                <th className="px-4 py-3">비고</th>
+                                <th className="px-2 py-3">삭제</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -162,15 +157,13 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
                                 <tr key={emp.id} className="bg-white border-b hover:bg-gray-50">
                                     <td className="px-2 py-4 text-center font-semibold">{index + 1}</td>
                                     <td className="px-4 py-2"><input type="text" value={emp.name} onChange={(e) => handleEmployeeChange(emp.id, 'name', e.target.value)} className="w-24 p-2 border rounded-md bg-gray-50" /></td>
-                                    <td className="px-4 py-2"><input type="text" value={emp.rrn} onChange={(e) => handleEmployeeChange(emp.id, 'rrn', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" placeholder="ex) 900101-1******" /></td>
-                                    <td className="px-4 py-2"><input type="number" value={emp.grossPay} onChange={(e) => handleEmployeeChange(emp.id, 'grossPay', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" placeholder="숫자만 입력" /></td>
+                                    <td className="px-4 py-2"><input type="text" value={emp.rrn} onChange={(e) => handleEmployeeChange(emp.id, 'rrn', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" /></td>
+                                    <td className="px-4 py-2"><input type="number" value={emp.grossPay} onChange={(e) => handleEmployeeChange(emp.id, 'grossPay', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.bank} onChange={(e) => handleEmployeeChange(emp.id, 'bank', e.target.value)} className="w-28 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.accountNumber} onChange={(e) => handleEmployeeChange(emp.id, 'accountNumber', e.target.value)} className="w-40 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.contact} onChange={(e) => handleEmployeeChange(emp.id, 'contact', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" /></td>
-                                    <td className="px-4 py-2 text-center">수학</td>
-                                    <td className="px-4 py-2 text-center">{`수학${teamId}팀`}</td>
                                     <td className="px-4 py-2">
-                                        <textarea value={emp.remarks} onChange={(e) => handleEmployeeChange(emp.id, 'remarks', e.target.value)} className="w-full p-2 border rounded-md bg-gray-50" rows="3"></textarea>
+                                        <textarea value={emp.remarks} onChange={(e) => handleEmployeeChange(emp.id, 'remarks', e.target.value)} className="w-full p-2 border rounded-md bg-gray-50" rows="2"></textarea>
                                     </td>
                                     <td className="px-2 py-4 text-center"><button onClick={() => removeEmployee(emp.id)} className="font-medium text-red-600 hover:underline">X</button></td>
                                 </tr>
@@ -202,7 +195,6 @@ const AdminView = ({ year, month, setMessageBox }) => {
             setAllData(sortedData);
             setIsLoading(false);
         }, (error) => {
-            console.error("관리자 데이터 로딩 중 오류:", error);
             setMessageBox({ message: "전체 데이터를 불러오는 데 실패했습니다. Firestore 보안 규칙을 확인하세요.", type: 'error' });
             setIsLoading(false);
         });
@@ -214,7 +206,6 @@ const AdminView = ({ year, month, setMessageBox }) => {
             setMessageBox({ message: "엑셀 라이브러리를 로드하는 중입니다. 잠시 후 다시 시도해주세요.", type: 'info' });
             return;
         }
-
         if (allData.length === 0) {
             setMessageBox({ message: "내보낼 데이터가 없습니다.", type: 'info' });
             return;
@@ -222,19 +213,17 @@ const AdminView = ({ year, month, setMessageBox }) => {
 
         const excelData = [];
         let rowNum = 1;
-
         allData.forEach(teamData => {
             teamData.employees.forEach(emp => {
                 excelData.push({
                     '번호': rowNum++,
+                    '팀': teamData.teamId,
                     '이름': emp.name,
                     '주민번호': emp.rrn,
-                    '지급액(세전)': Number(emp.grossPay),
-                    '거래은행': emp.bank,
-                    '계좌번호': emp.accountNumber,
                     '연락처': emp.contact,
-                    '과목(상세)': '수학',
-                    '내용': `수학${teamData.teamId}팀`,
+                    '은행': emp.bank,
+                    '계좌번호': emp.accountNumber,
+                    '금액': Number(emp.grossPay) || 0,
                     '비고': emp.remarks,
                 });
             });
@@ -244,10 +233,10 @@ const AdminView = ({ year, month, setMessageBox }) => {
         const workbook = window.XLSX.utils.book_new();
         window.XLSX.utils.book_append_sheet(workbook, worksheet, "급여명세서");
 
-        const cols = Object.keys(excelData[0] || {}).map(key => ({
-            wch: Math.max(15, key.length, ...excelData.map(row => (row[key] || '').toString().length))
-        }));
-        worksheet["!cols"] = cols;
+        worksheet["!cols"] = [
+            { wch: 5 }, { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
+            { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 30 }
+        ];
 
         window.XLSX.writeFile(workbook, `${year}년_${month}월_급여내역.xlsx`);
         setMessageBox({ message: "엑셀 파일이 성공적으로 다운로드되었습니다.", type: 'success' });
@@ -272,24 +261,25 @@ const AdminView = ({ year, month, setMessageBox }) => {
                                 <table className="w-full text-sm text-left text-gray-500">
                                     <thead className="text-xs text-gray-700 uppercase bg-gray-200">
                                         <tr>
-                                            <th className="px-2 py-3">번호</th><th className="px-4 py-3">이름</th><th className="px-4 py-3">주민번호</th><th className="px-4 py-3">지급액(세전)</th><th className="px-4 py-3">거래은행</th><th className="px-4 py-3">계좌번호</th><th className="px-4 py-3">연락처</th><th className="px-4 py-3">과목(상세)</th><th className="px-4 py-3">내용</th><th className="px-4 py-3">비고</th>
+                                            <th>번호</th><th>이름</th><th>주민번호</th><th>금액</th><th>은행</th><th>계좌번호</th><th>연락처</th><th>비고</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {teamData.employees.map((emp, index) => (
-                                            <tr key={emp.id || index} className="bg-white border-b">
-                                                <td className="px-2 py-4 text-center font-medium">{index + 1}</td>
-                                                <td className="px-4 py-4">{emp.name}</td>
-                                                <td className="px-4 py-4">{emp.rrn}</td>
-                                                <td className="px-4 py-4">{Number(emp.grossPay).toLocaleString()} 원</td>
-                                                <td className="px-4 py-4">{emp.bank}</td>
-                                                <td className="px-4 py-4">{emp.accountNumber}</td>
-                                                <td className="px-4 py-4">{emp.contact}</td>
-                                                <td className="px-4 py-4 text-center">수학</td>
-                                                <td className="px-4 py-4 text-center">{`수학${teamData.teamId}팀`}</td>
-                                                <td className="px-4 py-4 w-64 whitespace-pre-wrap">{emp.remarks}</td>
-                                            </tr>
-                                        ))}
+                                        {teamData.employees.map((emp, index) => {
+                                            const grossPay = Number(emp.grossPay) || 0;
+                                            return (
+                                                <tr key={emp.id || index} className="bg-white border-b">
+                                                    <td className="px-2 py-4 text-center">{index + 1}</td>
+                                                    <td className="px-4 py-4">{emp.name}</td>
+                                                    <td className="px-4 py-4">{emp.rrn}</td>
+                                                    <td className="px-4 py-4">{grossPay.toLocaleString()} 원</td>
+                                                    <td className="px-4 py-4">{emp.bank}</td>
+                                                    <td className="px-4 py-4">{emp.accountNumber}</td>
+                                                    <td className="px-4 py-4">{emp.contact}</td>
+                                                    <td className="px-4 py-4 w-64 whitespace-pre-wrap">{emp.remarks}</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -316,7 +306,6 @@ const AuthPage = ({ setMessageBox }) => {
             if (error.code === 'auth/invalid-credential') {
                  errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
             }
-            console.error("로그인 오류:", error.code);
             setMessageBox({ message: errorMessage, type: 'error' });
         }
     };
@@ -328,7 +317,6 @@ const AuthPage = ({ setMessageBox }) => {
                     <h1 className="text-3xl font-extrabold text-gray-900">급여 관리 시스템</h1>
                     <p className="mt-2 text-gray-500">로그인</p>
                 </div>
-                
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="text-sm font-bold text-gray-600 block">이메일</label>
@@ -358,16 +346,12 @@ export default function App() {
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-    // 엑셀 라이브러리를 동적으로 로드합니다.
     useEffect(() => {
         const script = document.createElement('script');
         script.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
         script.async = true;
         document.head.appendChild(script);
-
-        return () => {
-            document.head.removeChild(script);
-        };
+        return () => { document.head.removeChild(script); };
     }, []);
 
     useEffect(() => {
