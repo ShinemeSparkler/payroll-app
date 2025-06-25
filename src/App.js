@@ -104,7 +104,7 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
 
     const addEmployee = () => {
         setEmployees([...employees, { 
-            id: crypto.randomUUID(), name: '', rrn: '', grossPay: '', tax: '',
+            id: crypto.randomUUID(), name: '', rrn: '', grossPay: '',
             bank: '', accountNumber: '', contact: '', remarks: '' 
         }]);
     };
@@ -144,11 +144,12 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
                                 <th className="px-2 py-3">번호</th>
                                 <th className="px-4 py-3">이름</th>
                                 <th className="px-4 py-3">주민번호</th>
-                                <th className="px-4 py-3">금액(세전)</th>
-                                <th className="px-4 py-3">세금</th>
+                                <th className="px-4 py-3">지급액(세전)</th>
                                 <th className="px-4 py-3">거래은행</th>
                                 <th className="px-4 py-3">계좌번호</th>
                                 <th className="px-4 py-3">연락처</th>
+                                <th className="px-4 py-3">과목(상세)</th>
+                                <th className="px-4 py-3">내용</th>
                                 <th className="px-4 py-3">비고</th>
                                 <th className="px-2 py-3">삭제</th>
                             </tr>
@@ -160,10 +161,11 @@ const TeamView = ({ userProfile, year, month, setMessageBox }) => {
                                     <td className="px-4 py-2"><input type="text" value={emp.name} onChange={(e) => handleEmployeeChange(emp.id, 'name', e.target.value)} className="w-24 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.rrn} onChange={(e) => handleEmployeeChange(emp.id, 'rrn', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="number" value={emp.grossPay} onChange={(e) => handleEmployeeChange(emp.id, 'grossPay', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" /></td>
-                                    <td className="px-4 py-2"><input type="number" value={emp.tax} onChange={(e) => handleEmployeeChange(emp.id, 'tax', e.target.value)} className="w-28 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.bank} onChange={(e) => handleEmployeeChange(emp.id, 'bank', e.target.value)} className="w-28 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.accountNumber} onChange={(e) => handleEmployeeChange(emp.id, 'accountNumber', e.target.value)} className="w-40 p-2 border rounded-md bg-gray-50" /></td>
                                     <td className="px-4 py-2"><input type="text" value={emp.contact} onChange={(e) => handleEmployeeChange(emp.id, 'contact', e.target.value)} className="w-32 p-2 border rounded-md bg-gray-50" /></td>
+                                    <td className="px-4 py-2 text-center">수학</td>
+                                    <td className="px-4 py-2 text-center">{`수학${teamId}팀`}</td>
                                     <td className="px-4 py-2">
                                         <textarea value={emp.remarks} onChange={(e) => handleEmployeeChange(emp.id, 'remarks', e.target.value)} className="w-full p-2 border rounded-md bg-gray-50" rows="2"></textarea>
                                     </td>
@@ -218,18 +220,16 @@ const AdminView = ({ year, month, setMessageBox }) => {
         allData.forEach(teamData => {
             teamData.employees.forEach(emp => {
                 const grossPay = Number(emp.grossPay) || 0;
-                const tax = Number(emp.tax) || 0;
                 excelData.push({
                     '번호': rowNum++,
-                    '팀': teamData.teamId,
                     '이름': emp.name,
                     '주민번호': emp.rrn,
-                    '연락처': emp.contact,
-                    '은행': emp.bank,
+                    '지급액(세전)': grossPay,
+                    '거래은행': emp.bank,
                     '계좌번호': emp.accountNumber,
-                    '금액': grossPay,
-                    '세금': tax,
-                    '실지급액': grossPay - tax,
+                    '연락처': emp.contact,
+                    '과목(상세)': '수학',
+                    '내용': `수학${teamData.teamId}팀`,
                     '비고': emp.remarks,
                 });
             });
@@ -240,8 +240,8 @@ const AdminView = ({ year, month, setMessageBox }) => {
         window.XLSX.utils.book_append_sheet(workbook, worksheet, "급여명세서");
 
         worksheet["!cols"] = [
-            { wch: 5 }, { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
-            { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 }
+            { wch: 5 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 30 }
         ];
 
         window.XLSX.writeFile(workbook, `${year}년_${month}월_급여내역.xlsx`);
@@ -267,23 +267,23 @@ const AdminView = ({ year, month, setMessageBox }) => {
                                 <table className="w-full text-sm text-left text-gray-500">
                                     <thead className="text-xs text-gray-700 uppercase bg-gray-200">
                                         <tr>
-                                            <th>번호</th><th>이름</th><th>주민번호</th><th>금액(세전)</th><th>세금</th><th>은행</th><th>계좌번호</th><th>연락처</th><th>비고</th>
+                                            <th>번호</th><th>이름</th><th>주민번호</th><th>지급액(세전)</th><th>거래은행</th><th>계좌번호</th><th>연락처</th><th>과목(상세)</th><th>내용</th><th>비고</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {teamData.employees.map((emp, index) => {
                                             const grossPay = Number(emp.grossPay) || 0;
-                                            const tax = Number(emp.tax) || 0;
                                             return (
                                                 <tr key={emp.id || index} className="bg-white border-b">
                                                     <td className="px-2 py-4 text-center">{index + 1}</td>
                                                     <td className="px-4 py-4">{emp.name}</td>
                                                     <td className="px-4 py-4">{emp.rrn}</td>
                                                     <td className="px-4 py-4">{grossPay.toLocaleString()} 원</td>
-                                                    <td className="px-4 py-4">{tax.toLocaleString()} 원</td>
                                                     <td className="px-4 py-4">{emp.bank}</td>
                                                     <td className="px-4 py-4">{emp.accountNumber}</td>
                                                     <td className="px-4 py-4">{emp.contact}</td>
+                                                    <td className="px-4 py-4 text-center">수학</td>
+                                                    <td className="px-4 py-4 text-center">{`수학${teamData.teamId}팀`}</td>
                                                     <td className="px-4 py-4 w-64 whitespace-pre-wrap">{emp.remarks}</td>
                                                 </tr>
                                             );
